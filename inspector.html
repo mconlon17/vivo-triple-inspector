@@ -72,8 +72,10 @@ a:visited{
 <script>
 
 // Three column output
+function draw(data, uri) {
+  document.getElementById("header").innerHTML = ""
+  document.getElementById("container").innerHTML = ""
 
-function draw(data) {
 	d3.select("#container")
 	.append("div")
 		.attr("class","columnar")
@@ -92,34 +94,72 @@ function draw(data) {
 	d3.selectAll("div.line")
 		.append("a")
 		.attr("class","spacer")
-		.attr("href",function(d) { if((d.o.value.length > 8) && (d.o.value.substring(0,7) == "http://")) {return d.o.value;} else {return ".";}})
-		.text(function(d) { if((d.o.value.length > 8) && (d.o.value.substring(0,7) == "http://")) {return "V";} else {return " ";}})
+    .attr("href",function(d) { return isURI(d)? d.o.value : "." })
+		.text(function(d) { return isURI(d)? "V" : " " })
 					
 		
 	d3.selectAll("div.line")
 		.append("a")
 			.attr("class","object")
-			.attr("href",function(d) { if((d.o.value.length > 8) && (d.o.value.substring(0,7) == "http://")) {return "/inspector-results.html?vivouri="+d.o.value;} else {return ".";}})
+			.attr("href",function(d) { return isURI(d)? "?vivo_uri="+d.o.value : "." })
 			.text(function(d){if (d.o.value.length >0) {return d.o.value;} else {return "No value";}})
 			
 	d3.select("#header")
 		.append("h2")
 		.text(function(d) {return "Triples for "+uri})
 }
+
+// isURI checks if the given d3 data object's value is a URI.
+function isURI(d) {
+  const scheme = d.o.value.substring(0,8);
+  return scheme == "https://" || scheme.substring(0,7) == "http://";
+}
 </script>
 <script>
 
-// SPARQL Call
+// getUrlParameter copied from https://davidwalsh.name/query-string-javascript
+function getUrlParameter(name) {
+    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+    var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+    var results = regex.exec(location.search);
+    return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+};
 
+// SPARQL Call
+function callSPARQL(uri) {
+    if (!uri)
+        return;
     var format = 'format=application%2Fsparql-results%2Bjson%0A';
     var endpointURL = 'http://sparql.vivo.ufl.edu:3030/VIVO/sparql?default-graph=&save=display&fname=&timeout=7000&should-sponge=soft&debug=on';
-	var uri = unescape(window.location.search.split('=')[1])
     var query = "%0ASELECT+%3Fp+%3Fo%0AWHERE+%7B%0A++%3C"+uri+"%3E+%3Fp+%3Fo%0A%7D%0AORDER+BY+%3Fp%0A"
 	var querystring = endpointURL + '&query=' + query + '&' + format;
-	$.getJSON(querystring, function(data) {	draw(data); });
+	$.getJSON(querystring, function(data) {	draw(data, uri); });
+}
+
+function handleSubmit(event) {
+    event.preventDefault();
+    callSPARQL(document.getElementById("vivo_uri").value);
+}
+
+$(function () {
+  callSPARQL(getUrlParameter("vivo_uri"))
+})
 </script>
 </head>
 <body style="margin: 50px;">
+  <h2>Show VIVO Triples</h2>
+    <p>The Inspector will list all the VIVO triples that have, as their subject, the specified URI</p>
+
+    <form id="form">
+        <p>
+            <label for="vivo_uri">URI to be inspected</label>
+            <input size="60"  type="text" id="vivo_uri" name="vivo_uri" value="" />
+        </p>
+        <p class="submit">
+            <input type="submit" id="submit" value="Submit"/>
+        </p>
+    </form>
+ 
     <div id="header"></div>
 	<div id="container"></div>
 </body>
