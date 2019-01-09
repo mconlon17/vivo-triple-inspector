@@ -66,6 +66,14 @@ a:visited{
   color:black;
   text-decoration: none;
 }
+
+#warning {
+  font-style: italic;
+}
+#warning a,
+#warning a:visited {
+  color: teal;
+}
 </style>
 
 <script>
@@ -140,8 +148,28 @@ function handleSubmit(event) {
     callSPARQL(document.getElementById("vivo_uri").value);
 }
 
+function checkUri(uri) {
+  if (!uri)
+    return document.getElementById("warning").innerHTML = '';
+
+  // Check to see if the User entered a VIVO URL instead of Resource URI.
+  // Example: https://vivo.ufl.edu/display/n007
+  const isVivoURL = /https:/.test(uri) || /\/display\//.test(uri)
+  if (!isVivoURL)
+    return document.getElementById("warning").innerHTML = '';
+
+  uri = uri.replace("https","http").replace("/display/", "/individual/")
+  document.getElementById("warning").innerHTML =
+    'Did you mean <a href="?vivo_uri=' + uri + '">' + uri + "</a>?"
+}
+
 $(function () {
-  callSPARQL(getUrlParameter("vivo_uri"))
+  const uri = getUrlParameter("vivo_uri")
+  callSPARQL(uri)
+  document.getElementById("vivo_uri").addEventListener("input", function (e) {
+    checkUri(e.target.value)
+  })
+  checkUri(uri)
 })
 </script>
 </head>
@@ -152,8 +180,10 @@ $(function () {
     <form id="form">
         <p>
             <label for="vivo_uri">URI to be inspected</label>
-            <input size="60"  type="text" id="vivo_uri" name="vivo_uri" value="" />
+            <input size="60"  type="text" id="vivo_uri" name="vivo_uri" value=""
+              placeholder="http://vivo.ufl.edu/individual/n007" />
         </p>
+        <p id="warning"></p>
         <p class="submit">
             <input type="submit" id="submit" value="Submit"/>
         </p>
